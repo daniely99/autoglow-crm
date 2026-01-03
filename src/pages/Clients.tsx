@@ -1,16 +1,18 @@
 import { useState } from "react";
-import { Search, Filter, SortDesc, Loader2, UserPlus } from "lucide-react";
+import { Search, Filter, SortDesc, Loader2, UserPlus, Upload } from "lucide-react";
 import { AppLayout } from "@/components/layout/AppLayout";
 import { ClientCard } from "@/components/clients/ClientCard";
 import { Input } from "@/components/ui/input";
 import { Button } from "@/components/ui/button";
-import { useClients, Client } from "@/hooks/useClients";
+import { useClients } from "@/hooks/useClients";
 import { AddClientDialog } from "@/components/clients/AddClientDialog";
+import { ImportClientsDialog } from "@/components/clients/ImportClientsDialog";
 
 const Clients = () => {
   const { data: clients, isLoading } = useClients();
   const [searchQuery, setSearchQuery] = useState("");
   const [isAddDialogOpen, setIsAddDialogOpen] = useState(false);
+  const [isImportDialogOpen, setIsImportDialogOpen] = useState(false);
 
   const filteredClients = (clients || []).filter(
     (client) =>
@@ -29,10 +31,16 @@ const Clients = () => {
               Your garage of {clients?.length || 0} vehicles
             </p>
           </div>
-          <Button variant="neon" size="sm" onClick={() => setIsAddDialogOpen(true)}>
-            <UserPlus className="w-4 h-4 mr-1" />
-            Add
-          </Button>
+          <div className="flex gap-2">
+            <Button variant="outline" size="sm" onClick={() => setIsImportDialogOpen(true)}>
+              <Upload className="w-4 h-4 mr-1" />
+              Import CSV
+            </Button>
+            <Button variant="neon" size="sm" onClick={() => setIsAddDialogOpen(true)}>
+              <UserPlus className="w-4 h-4 mr-1" />
+              Add
+            </Button>
+          </div>
         </div>
 
         {/* Search & Filter */}
@@ -92,6 +100,7 @@ const Clients = () => {
       </div>
 
       <AddClientDialog open={isAddDialogOpen} onOpenChange={setIsAddDialogOpen} />
+      <ImportClientsDialog open={isImportDialogOpen} onOpenChange={setIsImportDialogOpen} />
     </AppLayout>
   );
 };
