@@ -9,7 +9,8 @@ import { ScrollArea } from "@/components/ui/scroll-area";
 import { useCampaigns } from "@/hooks/useCampaigns";
 import { useClients } from "@/hooks/useClients";
 import { useToast } from "@/hooks/use-toast";
-
+import { useQueryClient } from "@tanstack/react-query";
+import { supabase } from "@/integrations/supabase/client";
 interface StartCampaignDialogProps {
   open: boolean;
   onOpenChange: (open: boolean) => void;
@@ -19,6 +20,7 @@ export const StartCampaignDialog = ({ open, onOpenChange }: StartCampaignDialogP
   const { data: campaigns, isLoading: campaignsLoading } = useCampaigns();
   const { data: clients, isLoading: clientsLoading } = useClients();
   const { toast } = useToast();
+  const queryClient = useQueryClient();
   
   const [selectedCampaign, setSelectedCampaign] = useState<string>("");
   const [selectedClients, setSelectedClients] = useState<string[]>([]);
@@ -62,29 +64,44 @@ export const StartCampaignDialog = ({ open, onOpenChange }: StartCampaignDialogP
     }
 
     setIsLaunching(true);
-    
-    // Log the action (backend logic to be wired up later)
-    console.log("🚀 Launching Campaign:", {
-      campaignId: selectedCampaign,
-      campaignName: activeCampaigns.find(c => c.id === selectedCampaign)?.name,
-      selectedClients: selectedClients,
-      clientCount: selectedClients.length,
-    });
 
-    // Simulate a brief delay
-    await new Promise(resolve => setTimeout(resolve, 800));
-    
-    setIsLaunching(false);
-    
-    toast({
-      title: "Campaign Launched! 🚀",
-      description: `Targeting ${selectedClients.length} client${selectedClients.length > 1 ? 's' : ''}.`,
-    });
-    
-    // Reset and close
-    setSelectedCampaign("");
-    setSelectedClients([]);
-    onOpenChange(false);
+    try {
+      const { data, error } = await supabase.functions.invoke('send-campaign', {
+        body: {
+          campaignId: selectedCampaign,
+          clientIds: selectedClients,
+        },
+      });
+
+      if (error) {
+        throw new Error(error.message || "Failed to launch campaign");
+      }
+
+      if (data?.error) {
+        throw new Error(data.error);
+      }
+
+      // Invalidate messages query to refresh inbox
+      queryClient.invalidateQueries({ queryKey: ["messages"] });
+
+      toast({
+        title: "Campaign Launched! 🚀",
+        description: `${data.messagesCreated} message${data.messagesCreated !== 1 ? 's' : ''} sent${data.skippedClients > 0 ? `, ${data.skippedClients} skipped (no phone)` : ''}.`,
+      });
+
+      // Reset and close
+      setSelectedCampaign("");
+      setSelectedClients([]);
+      onOpenChange(false);
+    } catch (error) {
+      toast({
+        title: "Campaign Failed",
+        description: error instanceof Error ? error.message : "An unexpected error occurred",
+        variant: "destructive",
+      });
+    } finally {
+      setIsLaunching(false);
+    }
   };
 
   return (

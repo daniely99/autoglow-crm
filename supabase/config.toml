@@ -1,1 +1,4 @@
 project_id = "dsgldjkbohxzyznjucvn"
+
+[functions.send-campaign]
+verify_jwt = true
