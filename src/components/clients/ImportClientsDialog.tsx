@@ -1,6 +1,7 @@
 import { useState, useCallback } from "react";
 import { Upload, FileSpreadsheet, Loader2, AlertCircle, Check } from "lucide-react";
 import Papa from "papaparse";
+import { parse, isValid, format } from "date-fns";
 import {
   Dialog,
   DialogContent,
@@ -12,6 +13,31 @@ import { Button } from "@/components/ui/button";
 import { useToast } from "@/hooks/use-toast";
 import { useQueryClient } from "@tanstack/react-query";
 import { supabase } from "@/integrations/supabase/client";
+
+const DATE_FORMATS = [
+  "yyyy-MM-dd",
+  "MM/dd/yyyy",
+  "dd/MM/yyyy",
+  "MM-dd-yyyy",
+  "d/M/yyyy",
+  "M/d/yyyy",
+  "dd-MM-yyyy",
+];
+
+const parseDate = (dateString: string | undefined | null): string | null => {
+  if (!dateString || !dateString.trim()) return null;
+  
+  const cleaned = dateString.trim();
+  
+  for (const dateFormat of DATE_FORMATS) {
+    const parsed = parse(cleaned, dateFormat, new Date());
+    if (isValid(parsed)) {
+      return format(parsed, "yyyy-MM-dd");
+    }
+  }
+  
+  return null;
+};
 
 interface ImportClientsDialogProps {
   open: boolean;
@@ -146,7 +172,7 @@ export const ImportClientsDialog = ({ open, onOpenChange }: ImportClientsDialogP
             ? row[columnMap.vehicle_details]?.trim() || "Unknown Vehicle" 
             : "Unknown Vehicle",
           last_service_date: columnMap.last_service_date 
-            ? row[columnMap.last_service_date]?.trim() || null 
+            ? parseDate(row[columnMap.last_service_date]) 
             : null,
           status: "Active",
           total_revenue: 0,
