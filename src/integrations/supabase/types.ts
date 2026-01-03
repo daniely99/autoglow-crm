@@ -14,7 +14,113 @@ export type Database = {
   }
   public: {
     Tables: {
-      [_ in never]: never
+      campaigns: {
+        Row: {
+          created_at: string
+          id: string
+          is_active: boolean | null
+          message_template: string | null
+          name: string
+          trigger_days_after_service: number | null
+          user_id: string
+        }
+        Insert: {
+          created_at?: string
+          id?: string
+          is_active?: boolean | null
+          message_template?: string | null
+          name: string
+          trigger_days_after_service?: number | null
+          user_id: string
+        }
+        Update: {
+          created_at?: string
+          id?: string
+          is_active?: boolean | null
+          message_template?: string | null
+          name?: string
+          trigger_days_after_service?: number | null
+          user_id?: string
+        }
+        Relationships: []
+      }
+      clients: {
+        Row: {
+          created_at: string
+          email: string | null
+          id: string
+          last_service_date: string | null
+          name: string
+          phone: string | null
+          status: string | null
+          total_revenue: number | null
+          user_id: string
+          vehicle_details: string | null
+        }
+        Insert: {
+          created_at?: string
+          email?: string | null
+          id?: string
+          last_service_date?: string | null
+          name: string
+          phone?: string | null
+          status?: string | null
+          total_revenue?: number | null
+          user_id: string
+          vehicle_details?: string | null
+        }
+        Update: {
+          created_at?: string
+          email?: string | null
+          id?: string
+          last_service_date?: string | null
+          name?: string
+          phone?: string | null
+          status?: string | null
+          total_revenue?: number | null
+          user_id?: string
+          vehicle_details?: string | null
+        }
+        Relationships: []
+      }
+      messages: {
+        Row: {
+          client_id: string
+          content: string
+          created_at: string
+          direction: string
+          id: string
+          status: string | null
+          user_id: string
+        }
+        Insert: {
+          client_id: string
+          content: string
+          created_at?: string
+          direction: string
+          id?: string
+          status?: string | null
+          user_id: string
+        }
+        Update: {
+          client_id?: string
+          content?: string
+          created_at?: string
+          direction?: string
+          id?: string
+          status?: string | null
+          user_id?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "messages_client_id_fkey"
+            columns: ["client_id"]
+            isOneToOne: false
+            referencedRelation: "clients"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
     }
     Views: {
       [_ in never]: never

@@ -1,52 +1,12 @@
-import { Plus } from "lucide-react";
+import { Plus, Loader2 } from "lucide-react";
 import { AppLayout } from "@/components/layout/AppLayout";
-import { CampaignCard, Campaign } from "@/components/campaigns/CampaignCard";
+import { CampaignCard } from "@/components/campaigns/CampaignCard";
 import { Button } from "@/components/ui/button";
-
-const mockCampaigns: Campaign[] = [
-  {
-    id: "1",
-    name: "The 6-Month Ceramic Boost",
-    description: "Reactivate clients who haven't visited in 6 months",
-    triggerCondition: "If 'Last Service' > 180 days",
-    messageTemplate: "Hey [Name], your [Vehicle] is due for a glow up. Want 20% off your next ceramic coating?",
-    isActive: true,
-    sentCount: 47,
-    responseRate: 32,
-  },
-  {
-    id: "2",
-    name: "Post-Detail Follow Up",
-    description: "Check in 48 hours after service",
-    triggerCondition: "48 hours after service completion",
-    messageTemplate: "Hey [Name]! How's your [Vehicle] looking? Any questions about maintaining that shine? 🌟",
-    isActive: true,
-    sentCount: 124,
-    responseRate: 58,
-  },
-  {
-    id: "3",
-    name: "Seasonal Polish Reminder",
-    description: "Quarterly maintenance reminder",
-    triggerCondition: "Every 90 days since last service",
-    messageTemplate: "Time for a seasonal polish! Your [Vehicle] deserves some TLC. Book now and save 15%.",
-    isActive: false,
-    sentCount: 89,
-    responseRate: 28,
-  },
-  {
-    id: "4",
-    name: "VIP Client Care",
-    description: "Special offers for high-value clients",
-    triggerCondition: "LTV > $5,000 AND Last Service > 60 days",
-    messageTemplate: "Hey [Name], as a VIP client, you get first access to our new graphene coating. Interested?",
-    isActive: true,
-    sentCount: 12,
-    responseRate: 67,
-  },
-];
+import { useCampaigns } from "@/hooks/useCampaigns";
 
 const Campaigns = () => {
+  const { data: campaigns, isLoading } = useCampaigns();
+
   return (
     <AppLayout>
       <div className="p-4 pt-6">
@@ -95,14 +55,45 @@ const Campaigns = () => {
           </div>
         </div>
 
+        {/* Loading State */}
+        {isLoading && (
+          <div className="flex items-center justify-center py-12">
+            <Loader2 className="w-8 h-8 animate-spin text-primary" />
+          </div>
+        )}
+
         {/* Campaign List */}
-        <div className="space-y-4">
-          {mockCampaigns.map((campaign, index) => (
-            <div key={campaign.id} style={{ animationDelay: `${index * 0.1}s` }}>
-              <CampaignCard campaign={campaign} />
-            </div>
-          ))}
-        </div>
+        {!isLoading && campaigns && campaigns.length > 0 && (
+          <div className="space-y-4">
+            {campaigns.map((campaign, index) => (
+              <div key={campaign.id} style={{ animationDelay: `${index * 0.1}s` }}>
+                <CampaignCard 
+                  campaign={{
+                    id: campaign.id,
+                    name: campaign.name,
+                    description: `Trigger after ${campaign.trigger_days_after_service} days`,
+                    triggerCondition: `If 'Last Service' > ${campaign.trigger_days_after_service} days`,
+                    messageTemplate: campaign.message_template || "No message template",
+                    isActive: campaign.is_active,
+                    sentCount: 0,
+                    responseRate: 0,
+                  }} 
+                />
+              </div>
+            ))}
+          </div>
+        )}
+
+        {/* Empty State */}
+        {!isLoading && (!campaigns || campaigns.length === 0) && (
+          <div className="glass-card p-8 text-center">
+            <p className="text-muted-foreground mb-4">No campaigns yet. Create your first reactivation loop!</p>
+            <Button variant="neon">
+              <Plus className="w-4 h-4 mr-2" />
+              Create Campaign
+            </Button>
+          </div>
+        )}
       </div>
     </AppLayout>
   );

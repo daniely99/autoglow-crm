@@ -1,6 +1,6 @@
 import { Zap, Clock, MessageCircle, ToggleLeft, ToggleRight } from "lucide-react";
 import { cn } from "@/lib/utils";
-import { useState } from "react";
+import { useToggleCampaign } from "@/hooks/useCampaigns";
 
 interface Campaign {
   id: string;
@@ -18,24 +18,28 @@ interface CampaignCardProps {
 }
 
 export const CampaignCard = ({ campaign }: CampaignCardProps) => {
-  const [isActive, setIsActive] = useState(campaign.isActive);
+  const toggleCampaign = useToggleCampaign();
+
+  const handleToggle = () => {
+    toggleCampaign.mutate({ id: campaign.id, is_active: !campaign.isActive });
+  };
 
   return (
     <div 
       className={cn(
         "glass-card p-4 animate-fade-in transition-all duration-300",
-        isActive ? "border-primary/30" : "border-glass-border opacity-70"
+        campaign.isActive ? "border-primary/30" : "border-glass-border opacity-70"
       )}
     >
       <div className="flex items-start justify-between mb-3">
         <div className="flex items-center gap-2">
           <div className={cn(
             "p-2 rounded-lg",
-            isActive ? "bg-primary/10" : "bg-secondary"
+            campaign.isActive ? "bg-primary/10" : "bg-secondary"
           )}>
             <Zap className={cn(
               "w-4 h-4",
-              isActive ? "text-primary" : "text-muted-foreground"
+              campaign.isActive ? "text-primary" : "text-muted-foreground"
             )} />
           </div>
           <div>
@@ -45,10 +49,11 @@ export const CampaignCard = ({ campaign }: CampaignCardProps) => {
         </div>
         
         <button
-          onClick={() => setIsActive(!isActive)}
-          className="transition-colors"
+          onClick={handleToggle}
+          disabled={toggleCampaign.isPending}
+          className="transition-colors disabled:opacity-50"
         >
-          {isActive ? (
+          {campaign.isActive ? (
             <ToggleRight className="w-8 h-8 text-primary" />
           ) : (
             <ToggleLeft className="w-8 h-8 text-muted-foreground" />
