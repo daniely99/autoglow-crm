@@ -1,95 +1,75 @@
 import { useState } from "react";
-import { ArrowLeft, MessageCircle } from "lucide-react";
+import { ArrowLeft, MessageCircle, Loader2 } from "lucide-react";
 import { AppLayout } from "@/components/layout/AppLayout";
-import { ConversationList, Conversation } from "@/components/inbox/ConversationList";
-import { ChatView, Message } from "@/components/inbox/ChatView";
+import { ChatView } from "@/components/inbox/ChatView";
 import { Button } from "@/components/ui/button";
 import { cn } from "@/lib/utils";
-
-const mockConversations: Conversation[] = [
-  {
-    id: "1",
-    clientName: "Marcus Chen",
-    clientVehicle: "Porsche 911 GT3",
-    lastMessage: "Yes! Book me in for Saturday",
-    timestamp: "2 min",
-    unread: true,
-  },
-  {
-    id: "2",
-    clientName: "Sarah Williams",
-    clientVehicle: "BMW M4 Competition",
-    lastMessage: "What packages do you offer?",
-    timestamp: "2 hr",
-    unread: true,
-  },
-  {
-    id: "3",
-    clientName: "David Rodriguez",
-    clientVehicle: "Tesla Model S Plaid",
-    lastMessage: "Thanks for the reminder!",
-    timestamp: "1 day",
-    unread: false,
-  },
-  {
-    id: "4",
-    clientName: "Emily Zhang",
-    clientVehicle: "Mercedes AMG GT",
-    lastMessage: "Perfect, see you then",
-    timestamp: "2 days",
-    unread: false,
-  },
-];
-
-const mockMessages: Record<string, Message[]> = {
-  "1": [
-    { id: "1", content: "Hey Marcus, your Porsche is due for a glow up. Want 20% off?", direction: "outbound", timestamp: "10:30 AM" },
-    { id: "2", content: "Oh nice! What does that include?", direction: "inbound", timestamp: "10:45 AM" },
-    { id: "3", content: "Full exterior detail, ceramic boost, and interior deep clean. Usually $450, yours for $360.", direction: "outbound", timestamp: "10:47 AM" },
-    { id: "4", content: "Yes! Book me in for Saturday", direction: "inbound", timestamp: "10:52 AM" },
-  ],
-  "2": [
-    { id: "1", content: "Hi Sarah! Time for a seasonal polish on your M4. 15% off this week.", direction: "outbound", timestamp: "Yesterday" },
-    { id: "2", content: "What packages do you offer?", direction: "inbound", timestamp: "2 hours ago" },
-  ],
-  "3": [
-    { id: "1", content: "Hey David, haven't seen your Model S in a while. Ready for a refresh?", direction: "outbound", timestamp: "2 days ago" },
-    { id: "2", content: "Thanks for the reminder!", direction: "inbound", timestamp: "1 day ago" },
-  ],
-  "4": [
-    { id: "1", content: "Your AMG GT is booked for Thursday at 2pm. See you then! 🚗", direction: "outbound", timestamp: "3 days ago" },
-    { id: "2", content: "Perfect, see you then", direction: "inbound", timestamp: "2 days ago" },
-  ],
-};
+import { useClients } from "@/hooks/useClients";
+import { useMessages, useSendMessage, useRealtimeMessages } from "@/hooks/useMessages";
+import { format } from "date-fns";
 
 const Inbox = () => {
-  const [selectedConversation, setSelectedConversation] = useState<string | null>(null);
+  const [selectedClientId, setSelectedClientId] = useState<string | null>(null);
+  const { data: clients, isLoading: clientsLoading } = useClients();
+  const { data: messages, isLoading: messagesLoading } = useMessages(selectedClientId || undefined);
+  const sendMessage = useSendMessage();
 
-  const selectedConv = mockConversations.find((c) => c.id === selectedConversation);
+  // Enable realtime updates
+  useRealtimeMessages(selectedClientId || undefined);
+
+  const selectedClient = clients?.find((c) => c.id === selectedClientId);
+
+  // Group messages by client to show conversations
+  const conversations = clients?.map((client) => ({
+    id: client.id,
+    clientName: client.name,
+    clientVehicle: client.vehicle_details || "No vehicle",
+    lastMessage: "Tap to start conversation",
+    timestamp: format(new Date(client.created_at), "MMM d"),
+    unread: false,
+  })) || [];
+
+  const handleSendMessage = async (content: string) => {
+    if (!selectedClientId) return;
+    await sendMessage.mutateAsync({ client_id: selectedClientId, content });
+  };
 
   return (
     <AppLayout>
       <div className="h-[calc(100vh-6rem)] flex flex-col">
         {/* Mobile: Show list or chat */}
         <div className="md:hidden flex-1 flex flex-col">
-          {selectedConversation ? (
+          {selectedClientId ? (
             <div className="flex-1 flex flex-col animate-slide-in">
               <div className="p-4 border-b border-glass-border flex items-center gap-3">
                 <Button
                   variant="ghost"
                   size="icon"
-                  onClick={() => setSelectedConversation(null)}
+                  onClick={() => setSelectedClientId(null)}
                 >
                   <ArrowLeft className="w-5 h-5" />
                 </Button>
                 <h2 className="font-display font-semibold">Messages</h2>
               </div>
               <div className="flex-1">
-                <ChatView
-                  clientName={selectedConv?.clientName || ""}
-                  clientVehicle={selectedConv?.clientVehicle || ""}
-                  messages={mockMessages[selectedConversation] || []}
-                />
+                {messagesLoading ? (
+                  <div className="flex items-center justify-center h-full">
+                    <Loader2 className="w-6 h-6 animate-spin text-primary" />
+                  </div>
+                ) : (
+                  <ChatView
+                    clientName={selectedClient?.name || ""}
+                    clientVehicle={selectedClient?.vehicle_details || ""}
+                    messages={(messages || []).map((m) => ({
+                      id: m.id,
+                      content: m.content,
+                      direction: m.direction,
+                      timestamp: format(new Date(m.created_at), "h:mm a"),
+                    }))}
+                    onSendMessage={handleSendMessage}
+                    isSending={sendMessage.isPending}
+                  />
+                )}
               </div>
             </div>
           ) : (
@@ -97,14 +77,41 @@ const Inbox = () => {
               <div className="p-4 border-b border-glass-border">
                 <h1 className="text-2xl font-display font-bold mb-1">Inbox</h1>
                 <p className="text-muted-foreground text-sm">
-                  {mockConversations.filter((c) => c.unread).length} unread messages
+                  {conversations.length} conversations
                 </p>
               </div>
-              <ConversationList
-                conversations={mockConversations}
-                selectedId={selectedConversation}
-                onSelect={setSelectedConversation}
-              />
+              
+              {clientsLoading ? (
+                <div className="flex items-center justify-center py-12">
+                  <Loader2 className="w-8 h-8 animate-spin text-primary" />
+                </div>
+              ) : (
+                <div className="flex-1 overflow-y-auto">
+                  {conversations.map((conv, index) => (
+                    <div
+                      key={conv.id}
+                      onClick={() => setSelectedClientId(conv.id)}
+                      className={cn(
+                        "p-4 border-b border-glass-border cursor-pointer transition-all duration-200 animate-slide-in hover:bg-secondary/50"
+                      )}
+                      style={{ animationDelay: `${index * 0.05}s` }}
+                    >
+                      <div className="flex items-start justify-between mb-1">
+                        <h4 className="font-semibold text-sm">{conv.clientName}</h4>
+                        <span className="text-[10px] text-muted-foreground">{conv.timestamp}</span>
+                      </div>
+                      <p className="text-xs text-muted-foreground mb-1">{conv.clientVehicle}</p>
+                      <p className="text-sm text-foreground/80 truncate">{conv.lastMessage}</p>
+                    </div>
+                  ))}
+                  
+                  {conversations.length === 0 && (
+                    <div className="text-center py-12 text-muted-foreground">
+                      No clients yet. Add clients to start conversations.
+                    </div>
+                  )}
+                </div>
+              )}
             </div>
           )}
         </div>
@@ -115,22 +122,51 @@ const Inbox = () => {
             <div className="p-4 border-b border-glass-border">
               <h1 className="text-xl font-display font-bold mb-1">Inbox</h1>
               <p className="text-muted-foreground text-sm">
-                {mockConversations.filter((c) => c.unread).length} unread
+                {conversations.length} conversations
               </p>
             </div>
-            <ConversationList
-              conversations={mockConversations}
-              selectedId={selectedConversation}
-              onSelect={setSelectedConversation}
-            />
+            <div className="flex-1 overflow-y-auto">
+              {conversations.map((conv, index) => (
+                <div
+                  key={conv.id}
+                  onClick={() => setSelectedClientId(conv.id)}
+                  className={cn(
+                    "p-4 border-b border-glass-border cursor-pointer transition-all duration-200",
+                    selectedClientId === conv.id 
+                      ? "bg-primary/10 border-l-2 border-l-primary" 
+                      : "hover:bg-secondary/50"
+                  )}
+                >
+                  <div className="flex items-start justify-between mb-1">
+                    <h4 className="font-semibold text-sm">{conv.clientName}</h4>
+                    <span className="text-[10px] text-muted-foreground">{conv.timestamp}</span>
+                  </div>
+                  <p className="text-xs text-muted-foreground mb-1">{conv.clientVehicle}</p>
+                  <p className="text-sm text-foreground/80 truncate">{conv.lastMessage}</p>
+                </div>
+              ))}
+            </div>
           </div>
           <div className="flex-1">
-            {selectedConversation ? (
-              <ChatView
-                clientName={selectedConv?.clientName || ""}
-                clientVehicle={selectedConv?.clientVehicle || ""}
-                messages={mockMessages[selectedConversation] || []}
-              />
+            {selectedClientId ? (
+              messagesLoading ? (
+                <div className="flex items-center justify-center h-full">
+                  <Loader2 className="w-6 h-6 animate-spin text-primary" />
+                </div>
+              ) : (
+                <ChatView
+                  clientName={selectedClient?.name || ""}
+                  clientVehicle={selectedClient?.vehicle_details || ""}
+                  messages={(messages || []).map((m) => ({
+                    id: m.id,
+                    content: m.content,
+                    direction: m.direction,
+                    timestamp: format(new Date(m.created_at), "h:mm a"),
+                  }))}
+                  onSendMessage={handleSendMessage}
+                  isSending={sendMessage.isPending}
+                />
+              )
             ) : (
               <div className="flex items-center justify-center h-full text-muted-foreground">
                 <div className="text-center">

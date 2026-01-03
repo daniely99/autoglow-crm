@@ -1,85 +1,38 @@
 import { useState } from "react";
-import { Search, Filter, SortDesc } from "lucide-react";
+import { Search, Filter, SortDesc, Loader2, UserPlus } from "lucide-react";
 import { AppLayout } from "@/components/layout/AppLayout";
-import { ClientCard, Client } from "@/components/clients/ClientCard";
+import { ClientCard } from "@/components/clients/ClientCard";
 import { Input } from "@/components/ui/input";
 import { Button } from "@/components/ui/button";
-
-const mockClients: Client[] = [
-  {
-    id: "1",
-    name: "Marcus Chen",
-    phone: "(555) 123-4567",
-    email: "marcus@email.com",
-    vehicle: "Porsche 911 GT3",
-    lastServiceDate: new Date(Date.now() - 30 * 24 * 60 * 60 * 1000), // 1 month ago
-    totalLTV: 4250,
-  },
-  {
-    id: "2",
-    name: "Sarah Williams",
-    phone: "(555) 234-5678",
-    email: "sarah@email.com",
-    vehicle: "BMW M4 Competition",
-    lastServiceDate: new Date(Date.now() - 120 * 24 * 60 * 60 * 1000), // 4 months ago
-    totalLTV: 2800,
-  },
-  {
-    id: "3",
-    name: "David Rodriguez",
-    phone: "(555) 345-6789",
-    email: "david@email.com",
-    vehicle: "Tesla Model S Plaid",
-    lastServiceDate: new Date(Date.now() - 200 * 24 * 60 * 60 * 1000), // 7 months ago
-    totalLTV: 1500,
-  },
-  {
-    id: "4",
-    name: "Emily Zhang",
-    phone: "(555) 456-7890",
-    email: "emily@email.com",
-    vehicle: "Mercedes AMG GT",
-    lastServiceDate: new Date(Date.now() - 45 * 24 * 60 * 60 * 1000), // 1.5 months ago
-    totalLTV: 3600,
-  },
-  {
-    id: "5",
-    name: "James Thompson",
-    phone: "(555) 567-8901",
-    email: "james@email.com",
-    vehicle: "Audi RS7",
-    lastServiceDate: new Date(Date.now() - 180 * 24 * 60 * 60 * 1000), // 6 months ago
-    totalLTV: 5200,
-  },
-  {
-    id: "6",
-    name: "Lisa Park",
-    phone: "(555) 678-9012",
-    email: "lisa@email.com",
-    vehicle: "Lamborghini Huracán",
-    lastServiceDate: new Date(Date.now() - 60 * 24 * 60 * 60 * 1000), // 2 months ago
-    totalLTV: 8500,
-  },
-];
+import { useClients, Client } from "@/hooks/useClients";
+import { AddClientDialog } from "@/components/clients/AddClientDialog";
 
 const Clients = () => {
+  const { data: clients, isLoading } = useClients();
   const [searchQuery, setSearchQuery] = useState("");
+  const [isAddDialogOpen, setIsAddDialogOpen] = useState(false);
 
-  const filteredClients = mockClients.filter(
+  const filteredClients = (clients || []).filter(
     (client) =>
       client.name.toLowerCase().includes(searchQuery.toLowerCase()) ||
-      client.vehicle.toLowerCase().includes(searchQuery.toLowerCase())
+      (client.vehicle_details || "").toLowerCase().includes(searchQuery.toLowerCase())
   );
 
   return (
     <AppLayout>
       <div className="p-4 pt-6">
         {/* Header */}
-        <div className="mb-6 animate-fade-in">
-          <h1 className="text-2xl font-display font-bold mb-1">Clients</h1>
-          <p className="text-muted-foreground text-sm">
-            Your garage of {mockClients.length} vehicles
-          </p>
+        <div className="flex items-start justify-between mb-6 animate-fade-in">
+          <div>
+            <h1 className="text-2xl font-display font-bold mb-1">Clients</h1>
+            <p className="text-muted-foreground text-sm">
+              Your garage of {clients?.length || 0} vehicles
+            </p>
+          </div>
+          <Button variant="neon" size="sm" onClick={() => setIsAddDialogOpen(true)}>
+            <UserPlus className="w-4 h-4 mr-1" />
+            Add
+          </Button>
         </div>
 
         {/* Search & Filter */}
@@ -101,21 +54,44 @@ const Clients = () => {
           </Button>
         </div>
 
-        {/* Client List */}
-        <div className="space-y-3">
-          {filteredClients.map((client, index) => (
-            <div key={client.id} style={{ animationDelay: `${index * 0.1}s` }}>
-              <ClientCard client={client} />
-            </div>
-          ))}
-        </div>
+        {/* Loading State */}
+        {isLoading && (
+          <div className="flex items-center justify-center py-12">
+            <Loader2 className="w-8 h-8 animate-spin text-primary" />
+          </div>
+        )}
 
-        {filteredClients.length === 0 && (
+        {/* Client List */}
+        {!isLoading && (
+          <div className="space-y-3">
+            {filteredClients.map((client, index) => (
+              <div key={client.id} style={{ animationDelay: `${index * 0.1}s` }}>
+                <ClientCard 
+                  client={{
+                    id: client.id,
+                    name: client.name,
+                    phone: client.phone || "",
+                    email: client.email || "",
+                    vehicle: client.vehicle_details || "No vehicle",
+                    lastServiceDate: client.last_service_date ? new Date(client.last_service_date) : new Date(),
+                    totalLTV: Number(client.total_revenue) || 0,
+                  }} 
+                />
+              </div>
+            ))}
+          </div>
+        )}
+
+        {!isLoading && filteredClients.length === 0 && (
           <div className="text-center py-12">
-            <p className="text-muted-foreground">No clients found</p>
+            <p className="text-muted-foreground">
+              {searchQuery ? "No clients found" : "No clients yet. Add your first client!"}
+            </p>
           </div>
         )}
       </div>
+
+      <AddClientDialog open={isAddDialogOpen} onOpenChange={setIsAddDialogOpen} />
     </AppLayout>
   );
 };

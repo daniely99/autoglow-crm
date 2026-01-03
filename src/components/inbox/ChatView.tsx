@@ -1,5 +1,5 @@
 import { useState } from "react";
-import { Send, Calendar, MoreVertical } from "lucide-react";
+import { Send, Calendar, MoreVertical, Loader2 } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { cn } from "@/lib/utils";
@@ -15,10 +15,26 @@ interface ChatViewProps {
   clientName: string;
   clientVehicle: string;
   messages: Message[];
+  onSendMessage?: (content: string) => Promise<void>;
+  isSending?: boolean;
 }
 
-export const ChatView = ({ clientName, clientVehicle, messages }: ChatViewProps) => {
+export const ChatView = ({ 
+  clientName, 
+  clientVehicle, 
+  messages, 
+  onSendMessage,
+  isSending 
+}: ChatViewProps) => {
   const [newMessage, setNewMessage] = useState("");
+
+  const handleSubmit = async (e: React.FormEvent) => {
+    e.preventDefault();
+    if (!newMessage.trim() || !onSendMessage) return;
+    
+    await onSendMessage(newMessage);
+    setNewMessage("");
+  };
 
   return (
     <div className="flex flex-col h-full">
@@ -41,6 +57,11 @@ export const ChatView = ({ clientName, clientVehicle, messages }: ChatViewProps)
 
       {/* Messages */}
       <div className="flex-1 overflow-y-auto p-4 space-y-3 scrollbar-hide">
+        {messages.length === 0 && (
+          <div className="text-center text-muted-foreground py-8">
+            <p>No messages yet. Send the first message!</p>
+          </div>
+        )}
         {messages.map((msg, index) => (
           <div
             key={msg.id}
@@ -73,19 +94,29 @@ export const ChatView = ({ clientName, clientVehicle, messages }: ChatViewProps)
       </div>
 
       {/* Input */}
-      <div className="p-4 border-t border-glass-border">
+      <form onSubmit={handleSubmit} className="p-4 border-t border-glass-border">
         <div className="flex items-center gap-2">
           <Input
             value={newMessage}
             onChange={(e) => setNewMessage(e.target.value)}
             placeholder="Type a message..."
             className="flex-1 bg-secondary border-glass-border"
+            disabled={isSending}
           />
-          <Button size="icon" variant="neon">
-            <Send className="w-4 h-4" />
+          <Button 
+            type="submit" 
+            size="icon" 
+            variant="neon"
+            disabled={isSending || !newMessage.trim()}
+          >
+            {isSending ? (
+              <Loader2 className="w-4 h-4 animate-spin" />
+            ) : (
+              <Send className="w-4 h-4" />
+            )}
           </Button>
         </div>
-      </div>
+      </form>
     </div>
   );
 };

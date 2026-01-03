@@ -1,11 +1,14 @@
-import { Building2, Key, CreditCard, Bell, Shield } from "lucide-react";
+import { Building2, Key, CreditCard, Bell, Shield, LogOut } from "lucide-react";
 import { AppLayout } from "@/components/layout/AppLayout";
 import { Input } from "@/components/ui/input";
 import { Button } from "@/components/ui/button";
 import { Switch } from "@/components/ui/switch";
 import { Label } from "@/components/ui/label";
+import { useAuth } from "@/hooks/useAuth";
 
 const Settings = () => {
+  const { signOut, user } = useAuth();
+
   return (
     <AppLayout>
       <div className="p-4 pt-6 pb-32">
@@ -15,6 +18,21 @@ const Settings = () => {
           <p className="text-muted-foreground text-sm">
             Configure your AutoGlow experience
           </p>
+        </div>
+
+        {/* Account Info */}
+        <div className="glass-card p-4 mb-4 animate-fade-in">
+          <div className="flex items-center gap-3 mb-4">
+            <div className="w-12 h-12 rounded-full bg-gradient-to-br from-primary to-accent flex items-center justify-center">
+              <span className="text-lg font-display font-bold text-primary-foreground">
+                {user?.email?.[0]?.toUpperCase() || "U"}
+              </span>
+            </div>
+            <div>
+              <p className="font-semibold">{user?.email}</p>
+              <p className="text-xs text-muted-foreground">Pro Account</p>
+            </div>
+          </div>
         </div>
 
         {/* Business Details */}
@@ -150,7 +168,12 @@ const Settings = () => {
             <Button variant="outline" className="w-full justify-start">
               Enable Two-Factor Auth
             </Button>
-            <Button variant="destructive" className="w-full justify-start">
+            <Button 
+              variant="destructive" 
+              className="w-full justify-start"
+              onClick={signOut}
+            >
+              <LogOut className="w-4 h-4 mr-2" />
               Sign Out
             </Button>
           </div>
